@@ -1,0 +1,67 @@
+{
+    "packages" : {
+        "vbs3500" : {
+            "name" : "VBS 3500 VF Roaming 24",
+            "rates" : {
+                "a": 15.00,
+                "b": 29.03,
+                "c": 143.00
+            }
+        },
+        "datachild" : {
+            "name" : "MdataSharing Child w ET",
+            "rates" : {
+                "a": 2.00
+            }
+        },
+        "4gsharer" : {
+            "name" : "4G Advance Data Sharer",
+            "rates" : {
+                "a": 5.00
+            }
+        },
+        "1gbwifi" : {
+            "name" : "1GB WiFi Tethering",
+            "rates" : {
+                "a": 8.40
+            }
+        },
+        "4g2gb" : {
+            "name" : "4G 2GB Advance",
+            "rates" : {
+                "a": 12.50,
+                "b": 23.79
+            }
+        },
+        "4g4gb" : {
+            "name" : "4G 4GB Advance",
+            "rates" : {
+                "a": 20.00
+            }
+        },
+        "inteurope" : {
+            "name" : "Int Calls Europe",
+            "rates" : {
+                "a": 5.99
+            }
+        },
+        "smallbus" : {
+            "name" : "MobileBB SmallBus",
+            "rates" : {
+                "a": 18.00
+            }
+        },
+        "dsplan" : {
+            "name" : "DataShare PricePlan",
+            "rates" : {
+                "a": 0.00
+            }
+        },
+        "datasharer" : {
+            "name" : "DataSharer",
+            "rates" : {
+                "a": 2.00
+            }
+        }
+    }
+}

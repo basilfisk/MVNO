@@ -1,0 +1,49 @@
+Create CDRs from Vodafone PDF Bill
+----------------------------------
+
+1.	Extract unprocessed text CDR data from a PDF bill
+		bin/pdf2txt "data/Sitec Vodafone May Bill.pdf" tmp/raw-pdf.txt
+
+2.	Generate CDRs from unprocessed text CDR data
+		node bin/txt2cdr.js -cdr="/home/bf/Temp/mvno/tmp/cdr-pdf.json" -txt="/home/bf/Temp/mvno/tmp/raw-pdf.txt"
+
+3.	Print a replica Vodafone bill
+		node bin/vodabill.js -cdr="/home/bf/Temp/mvno/tmp/cdr-pdf.json" -year=2016 -month=May -org=Sitec
+
+4.	Generate an MVNO bill from a CDR file
+		node bin/billing.js -cdr="/home/bf/Temp/mvno/tmp/cdr-pdf.json" -out=table
+
+
+
+Create CDRs from Vodafone CSV File
+----------------------------------
+
+1.	Generate CDRs from records in CSV file
+		node bin/csv2cdr.js -csv="/home/bf/Temp/mvno/data/Phone Itemisation.csv" -cdr="/home/bf/Temp/mvno/tmp/cdr-csv.json"
+
+2.	Generate an MVNO bill from a CDR file
+		node bin/billing.js -cdr="/home/bf/Temp/mvno/tmp/cdr-csv.json" -out=table
+
+
+
+
+
+OUTSTANDING ISSUES
+------------------
+txt2cdr.js
+	Missing some records with unwanted stuff in column 1 but CDRs in column 2
+
+vodabill.js
+	Add total h:m:s of calls for handset + qty of texts
+	Running total for all numbers called (handset and company) and whether in VPN
+	Show summary table for each handset of calls/texts to all numbers
+	Show summary table for company of calls/texts to all numbers
+x	Some reports dont have calls so report heading is missing
+	Data issues
+		Does not cater for prorating of call/data sitting on threshold (25/5 17:55 8m8s Full=0.900 Prorated=0.225)
+x		Does VPN mean other phones in Sitec (build a list as processing happens and show as subtotal)
+	Analysis
+		Work out % of usage and other charges vs total
+	Graphs
+		Call heat map for phone (http://bl.ocks.org/tjdecke/5558084)
+			X day, Y  number, intersection is heat white->red based on most calls/day

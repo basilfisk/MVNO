@@ -1,0 +1,31 @@
+{
+	"rates": {
+		"data": 2.2,
+		"landline": 2.9,
+		"mobile": 2.6,
+		"premium": 18,
+		"sms": 3.5,
+		"svc-low": 1.5,
+		"svc-med": 2.6,
+		"svc-high": 4.7,
+		"voicemail": 2.9
+	},
+	"types": {
+		"data": "data",
+		"sms": "sms",
+		"voice": {
+			"121": "voicemail",
+			"441": "landline",
+			"442": "landline",
+			"443": "landline",
+			"447": "mobile",
+			"449": "premium",
+			"44500": "svc-low",
+			"44800": "svc-low",
+			"44808": "svc-low",
+			"44844": "svc-high",
+			"44845": "svc-high",
+			"44870": "svc-med"
+		}
+	}
+}

@@ -1,0 +1,14 @@
+#!/bin/bash
+PDF=$1
+TXT=$2
+
+# Convert PDF file to text (only pages 19 to end)
+# -layout : Maintain original physical layout
+# -x -y : Top left of area to be parsed (based on 72dpi)
+# -W -H : Area to be parsed (based on 72dpi)
+# -f : First page
+# -l : Last page
+pdftotext -layout -x 144 -y 90 -W 396 -H 684 -f 19 "$PDF" $TXT
+
+## Remove new page characters with a NEWPAGE line
+sed -i 's/\o14/NEWPAGE\n/g' $TXT

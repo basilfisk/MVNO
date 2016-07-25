@@ -1,0 +1,92 @@
+{ "handsets" : {
+	"07554434012" : [
+		"vbs3500-b","4g2gb-b"
+	],
+	"07584578897" : [
+		"vbs3500-a","datachild-a"
+	],
+	"07584597843" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07585907100" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07590526550" : [
+		"vbs3500-a","4g4gb-a"
+	],
+	"07786632759" : [
+		"vbs3500-a","4g2gb-a"
+	],
+	"07788249842" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07788271915" : [
+		"vbs3500-a","datachild-a"
+	],
+	"07788274022" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07796230945" : [
+		"vbs3500-a","datachild-a"
+	],
+	"07798918554" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07825150402" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07825284594" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07825988307" : [
+		"vbs3500-a","4gsharer-a","1gbwifi-a"
+	],
+	"07826516977" : [
+		"vbs3500-a","4gsharer-a","1gbwifi-a"
+	],
+	"07833430163" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07867121380" : [
+		"dsplan-a","datasharer-a"
+	],
+	"07867122161" : [
+		"dsplan-a","datasharer-a"
+	],
+	"07867123112" : [
+		"dsplan-a","datasharer-a"
+	],
+	"07867334623" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07872824644" : [
+		"vbs3500-c","4g2gb-a"
+	],
+	"07876174025" : [
+		"vbs3500-a","datachild-a","4gsharer-a","inteurope-a"
+	],
+	"07880313130" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07901001190" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07979852696" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07980743539" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	],
+	"07867121576" : [
+		"dsplan-a","datasharer-a"
+	],
+	"07867121578" : [
+		"dsplan-a","datasharer-a"
+	],
+	"07825984597" : [
+		"dsplan-a","smallbus-a"
+	],
+	"07825706947" : [
+		"vbs3500-a","datachild-a","4gsharer-a"
+	]
+} }
