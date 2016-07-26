@@ -32,18 +32,25 @@ OUTSTANDING ISSUES
 ------------------
 txt2cdr.js
 	Missing some records with unwanted stuff in column 1 but CDRs in column 2
+	Calls abroad : 07825284594 07876174025
+	Sort out column widths
 
 vodabill.js
-	Add total h:m:s of calls for handset + qty of texts
-	Running total for all numbers called (handset and company) and whether in VPN
-	Show summary table for each handset of calls/texts to all numbers
-	Show summary table for company of calls/texts to all numbers
-x	Some reports dont have calls so report heading is missing
+	Issues
+		index_page should show a list of all months
+	Extra report tables
+		Summary of handsets in VPN
+		Summary for company of calls/texts to all numbers
 	Data issues
 		Does not cater for prorating of call/data sitting on threshold (25/5 17:55 8m8s Full=0.900 Prorated=0.225)
-x		Does VPN mean other phones in Sitec (build a list as processing happens and show as subtotal)
+		Does VPN mean other phones in Sitec (build a list as processing happens and show as subtotal)
 	Analysis
 		Work out % of usage and other charges vs total
 	Graphs
 		Call heat map for phone (http://bl.ocks.org/tjdecke/5558084)
 			X day, Y  number, intersection is heat white->red based on most calls/day
+	Database
+		Move vodafone.json -> provider collection
+		Move sitec.json -> customer collection
+		Move rates.json -> mvno collection
+		read_company should use Mongo instead fo FS

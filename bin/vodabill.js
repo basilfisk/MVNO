@@ -87,375 +87,10 @@ read_company(config.system.data + '/' + prms.company.code + '.json');
 
 
 // ---------------------------------------------------------------------------------------------
-// Build up usage stats for each handset
-//
-// Argument 1 : Call data record object
-// Argument 2 : Current CDR number
-// Argument 3 : Last CDR number
+// Summary of handset usage for the company
 // ---------------------------------------------------------------------------------------------
-function create_record (cdr, current, last) {
-	var head = [], data = [], datetime = [], str = '', hr, mi, sc;
-
-	// Handset header and voice header
-	if (current === 0) {
-		html += show_record(["S15-H1"], ["Itemisation for " + cdr.caller + " for " + prms.date.full + "\n"]);
-		html += show_record(["S10-H2"], ["Calls\n"]);
-
-		// CDR record table header
-		head = ['Time','Number or description','Details','Normal','You pay'];
-		html += show_record(["S8-T","S40-T","S10-T","S10-T-R","S10-T-R"], head);
-	}
-
-	// CDR type header
-	if (state.type !== cdr.type) {
-		// If last type is voice and current is a data record
-		if (state.type === 'voice' && cdr.type !== 'voice') {
-			// Voice totals
-			create_totals('voice', cdr.caller);
-
-			// Header for data
-			html += show_record(["S30-H2"], ["\nMessaging, Mobile Internet\n"]);
-
-			// CDR record table header
-			head = ['Time','Number or description','Details','Normal','You pay'];
-			html += show_record(["S8-T","S40-T","S10-T","S10-T-R","S10-T-R"], head);
-		}
-
-		// Save data type and reset data variable to print the CDR
-		state.type = cdr.type;
-	}
-
-	// Show date when it changes
-	datetime = cdr.time.split(' ');
-	if (state.date !== datetime[0]) {
-		state.date = datetime[0];
-		html += show_record(["S10-B"], [moment(datetime[0],'DD/MM/YY').format('ddd DD MMMM')]);
-	}
-
-	// Show voice records
-	if (cdr.type === 'voice') {
-		// Data record
-		data.push(datetime[1]);
-		data.push(cdr.called + ' ' + cdr.details);
-		// Call duration
-		hr = parseInt(cdr.duration / 3600);
-		mi = parseInt((cdr.duration - (hr * 3600)) / 60);
-		sc = cdr.duration - (hr * 3600) - (mi * 60);
-		str += (hr > 0) ? hr + 'h ' : '';
-		str += mi + 'm ';
-		str += sc + 's';
-		data.push(str);
-		// Charge
-		data.push(parseFloat(cdr.charge / 100));
-		// Charge if not in bundle
-		data.push((cdr.included === 'true') ? 0 : parseFloat(cdr.charge / 100));
-		// Included in bundle flag
-		data.push((cdr.included === 'true' && cdr.charge > 0) ? 'Y' : '');
-		html += show_record(["S8","S40","S10","F10.3-R-£","F10.3-R-£","S3"], data);
-
-		// Increment counters
-		handsets[cdr.caller].voice.vpn += (cdr.details === 'VPN') ? 1 : 0;
-		handsets[cdr.caller].voice.tot += 1;
-		handsets[cdr.caller].voice.chg += data[3];
-		handsets[cdr.caller].voice.exc += data[4];
-	}
-	// Data records
-	else {
-		// Data record
-		data.push(datetime[1]);
-		// Called number or 'Mobile internet' if data
-		data.push((cdr.type === 'data') ? 'Mobile internet' : cdr.called + ' ' + cdr.details);
-		// Data volume, empty if anything else
-		if (cdr.volume) {
-			// Express as MB, then add decimal place
-			if (cdr.volume >= 1000000) { str = parseInt(cdr.volume / 1000) + 'GB'; }
-			else if (cdr.volume >= 1000) { str = parseInt(cdr.volume) + 'MB'; }
-			else { str = parseInt(cdr.volume * 1000) + 'KB'; }
-			// Add decimal place
-			str = str.substring(0, str.length-5) + '.' + str.substring(str.length-5);
-			data.push(str);
-		}
-		else {
-			data.push('');
-		}
-		// Charge
-		data.push(parseFloat(cdr.charge / 100));
-		// Charge if not in bundle
-		data.push((cdr.included === 'true') ? 0 : parseFloat(cdr.charge / 100));
-		// Included in bundle flag
-		data.push((cdr.included === 'true') ? 'Y' : '');
-		html += show_record(["S8","S40","S10","F10.3-R-£","F10.3-R-£","S3"], data);
-
-		// Increment counters
-		handsets[cdr.caller].data.tot += 1;
-		handsets[cdr.caller].data.dat += (cdr.type === 'data') ? 1 : 0;
-		handsets[cdr.caller].data.txt += (cdr.type === 'text') ? 1 : 0;
-		handsets[cdr.caller].data.lng += (cdr.type === 'longtext') ? 1 : 0;
-		handsets[cdr.caller].data.pic += (cdr.type === 'picture') ? 1 : 0;
-		handsets[cdr.caller].data.vid += (cdr.type === 'video') ? 1 : 0;
-		handsets[cdr.caller].data.chg += data[3];
-		handsets[cdr.caller].data.exc += data[4];
-	}
-
-	// Handset data totals
-	if (current === last) {
-		create_totals('data', cdr.caller);
-	}
-}
-
-
-
-// ---------------------------------------------------------------------------------------------
-// Show usage totals for a handset
-//
-// Argument 1 : Voice or data
-// Argument 2 : Handset
-// ---------------------------------------------------------------------------------------------
-function create_totals (type, handset) {
-	var str, data;
-
-	// Voice sub-totals
-	if (type === 'voice') {
-		str = "Total of " + handsets[handset].voice.vpn + " calls inside VPN";
-		data = [str, '', '', 0, 0];
-		html += show_record(["S49","S10","S1","F10.3-R-£","F10.3-R-£"], data);
-
-		str = "Total of " + (handsets[handset].voice.tot - handsets[handset].voice.vpn) + " other calls";
-		data = [str, '', '', handsets[handset].voice.chg, handsets[handset].voice.exc];
-		html += show_record(["S49","S10","S1","F10.3-R-£","F10.3-R-£"], data);
-
-		str = "Total of " + handsets[handset].voice.tot + " calls";
-		data = [str, '', '', handsets[handset].voice.chg, handsets[handset].voice.exc];
-		html += show_record(["S49","S10","S1","F10.3-R-£","F10.3-R-£"], data);
-	}
-
-	// Data sub-totals and handset total
-	if (type === 'data') {
-		// Breakdown of data types
-		if (handsets[handset].data.dat > 0) {
-			data = [handsets[handset].data.dat + ' mobile internet charges', '', '', '', ''];
-			html += show_record(["S60s","S1","S1","S1","S1"], data);
-		}
-		if (handsets[handset].data.txt > 0) {
-			data = [handsets[handset].data.txt + ' texts', '', '', '', ''];
-			html += show_record(["S60s","S1","S1","S1","S1"], data);
-		}
-		if (handsets[handset].data.lng > 0) {
-			data = [handsets[handset].data.lng + ' long texts', '', '', '', ''];
-			html += show_record(["S60s","S1","S1","S1","S1"], data);
-		}
-		if (handsets[handset].data.pic > 0) {
-			data = [handsets[handset].data.pic + ' pictures', '', '', '', ''];
-			html += show_record(["S60s","S1","S1","S1","S1"], data);
-		}
-		if (handsets[handset].data.vid > 0) {
-			data = [handsets[handset].data.vid + ' videos', '', '', '', ''];
-			html += show_record(["S60s","S1","S1","S1","S1"], data);
-		}
-
-		// Data usage total
-		data = ['Data usage total', '', '', handsets[handset].data.chg, handsets[handset].data.exc];
-		html += show_record(["S60s","S1","S1","F10.3-R-£","F10.3-R-£"], data);
-
-		// Handset total and some new lines
-		str = "Total usage for " + handset;
-		data = [str, '', '', '', (handsets[handset].voice.exc + handsets[handset].data.exc)];
-		html += show_record(["S60","S1","S1","S1","F21.3-R-£"], data);
-		html += show_record(["S10-R"], ["\n\n\n"]);
-	}
-}
-
-
-
-// ---------------------------------------------------------------------------------------------
-// Start processing company data
-//
-// Argument 1 : Object holding organisation data
-// ---------------------------------------------------------------------------------------------
-function initialise (data) {
-	var org = {}, i, n, packages, arr;
-
-	// Create a unique ordered list of handsets
-	org = JSON.parse(data.toString());
-	handsets.seq = Object.keys(org.handsets).sort();
-
-	// Initialise data for each handset
-	for (i=0; i<handsets.seq.length; i++) {
-		// Add usage containers
-		if (handsets[handsets.seq[i]] === undefined) {
-			handsets[handsets.seq[i]] = {};
-			handsets[handsets.seq[i]].cdr = [];
-			handsets[handsets.seq[i]].unsorted = [];
-			handsets[handsets.seq[i]].data = {};
-			handsets[handsets.seq[i]].data.tot = 0;
-			handsets[handsets.seq[i]].data.dat = 0;
-			handsets[handsets.seq[i]].data.txt = 0;
-			handsets[handsets.seq[i]].data.lng = 0;
-			handsets[handsets.seq[i]].data.pic = 0;
-			handsets[handsets.seq[i]].data.vid = 0;
-			handsets[handsets.seq[i]].data.chg = 0;
-			handsets[handsets.seq[i]].data.exc = 0;
-			handsets[handsets.seq[i]].voice = {};
-			handsets[handsets.seq[i]].voice.tot = 0;
-			handsets[handsets.seq[i]].voice.vpn = 0;
-			handsets[handsets.seq[i]].voice.chg = 0;
-			handsets[handsets.seq[i]].voice.exc = 0;
-			handsets[handsets.seq[i]].standing = {};
-		}
-
-		// Load standing charges
-		packages = org.handsets[handsets.seq[i]];
-		for (n=0; n<packages.length; n++) {
-			arr = packages[n].split('-');
-			handsets[handsets.seq[i]].standing[arr[0]] = vodafone.packages[arr[0]].rates[arr[1]];
-		}
-	}
-
-	// Load the CDR file
-	load_cdrs();
-}
-
-
-
-// ---------------------------------------------------------------------------------------------
-// Load all the CDRs from file and store in a the 'handsets' object
-// ---------------------------------------------------------------------------------------------
-function load_cdrs () {
-	var cdr;
-
-	// Process the billing data in the CDR file line by line
-	cdr = readline.createInterface({
-		input: fs.createReadStream(prms.cdrfile)
-	});
-
-	// Read billing records from CDR file and process
-	cdr.on('line', function (line) {
-		var json, num, typ;
-
-		// Convert JSON to object and add the record number
-		json = JSON.parse(line);
-
-		// Increment the record number
-		recno++;
-
-		// Add CDR to handset
-		handsets[json.caller].cdr[recno] = json;
-
-		// Add a unique index for sorting (by call type and date/time)
-		typ = (json.type === 'voice') ? '1' : '2';
-		num = '000000' + recno;
-		handsets[json.caller].unsorted.push(typ + '-' + json.time + '-' + num.slice(-7));
-	});
-
-	// Close the CDR file and process the CDRs for each handset
-	cdr.on('close', function () {
-		process_cdrs();
-	});
-}
-
-
-
-// ---------------------------------------------------------------------------------------------
-// Parse a charge to be included in the report
-//
-// Argument 1 : Charge in pence
-//
-// If charge is defined return the value
-// If value is not defined, return 0
-// ---------------------------------------------------------------------------------------------
-function nvl (value) {
-	return (value === undefined) ? 0 : parseFloat(value);
-}
-
-
-
-// ---------------------------------------------------------------------------------------------
-// Process CDRs for each handset
-// ---------------------------------------------------------------------------------------------
-function process_cdrs () {
-	var i, index, file;
-
-	// Create HTML page linking all handset reports
-	index = '<html><head>';
-	index += '<title>' + prms.company.name + ' Vodafone Bill for ' + prms.date.full + '</title>';
-	index += '<link rel="stylesheet" href="' + config.system.css + '">';
-	index += '</head><body>';
-	index += '<h1>' + prms.company.name + ' Vodafone Bill for ' + prms.date.full + '</h1>';
-	index += '<h2><a href="summary.html">Handset Summary</a></h2>';
-	index += '<h2>Handset Bills</h2><ol>';
-
-	// Create output for each handset (in handset number order)
-	for (i=0; i<handsets.seq.length; i++) {
-		report_handset(handsets.seq[i]);
-
-		// Create HTML page linking all handset reports
-		index += '<li><a href="' + handsets.seq[i] + '.html">' + handsets.seq[i] + '</a></li>';
-	}
-
-	// Close the HTML link page and write to file
-	index += '</ol></body></html>';
-	file = config.system.root + '/' + prms.company.code + '/index.html';
-	write_file (file, index);
-
-	// Summary of handset usage
-	report_summary();
-}
-
-
-
-// ---------------------------------------------------------------------------------------------
-// Read company configuration data from a file
-//
-// Argument 1 : Name of file
-// ---------------------------------------------------------------------------------------------
-function read_company (file) {
-	fs.readFile(file, function(error, data) {
-		if (error) {
-			console.error("Error reading [" + file + "]: " + error.message);
-		}
-		// Start processing company data
-		initialise(data);
-	});
-}
-
-
-
-// ---------------------------------------------------------------------------------------------
-// Report of CDRs for each handset
-// ---------------------------------------------------------------------------------------------
-function report_handset (handset) {
-	var sorted, n, arr, cdr, file;
-
-	// Initialise the HTML output
-	html = '<html><head><title>Bill for ';
-	html += handset;
-	html += '</title><link rel="stylesheet" href="' + config.system.css + '"></head><body>';
-
-	// Sort CDRs by date time for this handset
-	sorted = handsets[handset].unsorted.sort();
-
-	// Process CDRs for this handset
-	for (n=0; n<sorted.length; n++) {
-		arr = sorted[n].split('-');
-		cdr = handsets[handset].cdr[parseInt(arr[2])];
-		if (cdr) {
-			create_record(cdr, n, sorted.length-1);
-		}
-	}
-
-	// Close the HTML output and write to file
-	html += '</body></html>';
-	file = config.system.root + '/' + prms.company.code + '/' + handset + '.html';
-	write_file (file, html);
-}
-
-
-
-// ---------------------------------------------------------------------------------------------
-// Summary of handset usage
-// ---------------------------------------------------------------------------------------------
-function report_summary () {
-	var packages, n, index, data = [], fmt = [], i, vchg, vexc, dchg, dexc, schg, col = {}, file;
+function company_summary () {
+	var packages, n, index, data = [], fmt = [], i, str, vchg, vexc, dchg, dexc, schg, col = {};
 
 	// Vodafone packages
 	packages = Object.keys(vodafone.packages);
@@ -470,7 +105,7 @@ function report_summary () {
 
 	// Table heading
 	fmt = ["S15-T","S5-T"];
-	data = ['Handset','Voda'];
+	data = ['Handset','Vodafone Bill'];
 	for (n=0; n<packages.length; n++) {
 		fmt.push("S10-T-R");
 		data.push(vodafone.packages[packages[n]].name);
@@ -497,11 +132,12 @@ function report_summary () {
 		fmt = ["S15","S5"];
 		data.push(handsets.seq[i]);
 		if ((handsets[handsets.seq[i]].data.chg + handsets[handsets.seq[i]].voice.chg) > 0) {
-//			data = ['<a href="' + handsets.seq[i] + '.html">' + handsets.seq[i] + '</a>'];
-			data.push('<a href="' + handsets.seq[i] + '.html">Bill</a>');
+			str = '<a href="' + handsets.seq[i] + '.html">View</a>';
+			str += ' <a href="' + handsets.seq[i] + '_us.html">3D</a>';
+			str += ' <a href="' + handsets.seq[i] + '_ub.html">2D</a>';
+			data.push(str);
 		}
 		else {
-//			data = [handsets.seq[i]];
 			data.push('');
 		}
 
@@ -558,8 +194,586 @@ function report_summary () {
 
 	// Close the HTML link page and write to file
 	index += '</table></body></html>';
-	file = config.system.root + '/' + prms.company.code + '/summary.html';
-	write_file (file, index);
+	write_file('data', 'summary.html', index);
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Format the number of seconds into a string '0h 0m 0s'
+//
+// Argument 1 : Number of seconds
+// ---------------------------------------------------------------------------------------------
+function format_duration (secs) {
+	var hr, mi, sc, str = '';
+	hr = parseInt(secs / 3600);
+	mi = parseInt((secs - (hr * 3600)) / 60);
+	sc = secs - (hr * 3600) - (mi * 60);
+	str += (hr > 0) ? hr + 'h ' : '';
+	str += mi + 'm ';
+	str += sc + 's';
+	return str;
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Format the data volume as MB, then add decimal place
+//
+// Argument 1 : Number of KB
+// ---------------------------------------------------------------------------------------------
+function format_volume (kb) {
+	var str;
+	if (kb >= 1000000) { str = parseInt(kb / 1000) + 'GB'; }
+	else if (kb >= 1000) { str = parseInt(kb) + 'MB'; }
+	else { str = parseInt(kb * 1000) + 'KB'; }
+	// Add decimal place
+	return str.substring(0, str.length-5) + '.' + str.substring(str.length-5);
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Add a CDR to the handset report
+//
+// Argument 1 : Call data record object
+// Argument 2 : Current CDR number
+// Argument 3 : Last CDR number
+// ---------------------------------------------------------------------------------------------
+function handset_cdr (cdr, current, last) {
+	var head = [], data = [], datetime = [], dom, vpn;
+
+	// Handset header and voice header
+	if (current === 0) {
+		html += show_record(["S15-H1"], ["Itemisation for " + cdr.caller + " for " + prms.date.full + "\n"]);
+		html += show_record(["S10-H2"], ["Calls\n"]);
+
+		// CDR record table header
+		head = ['Time','Number or description','Details','Normal','You pay'];
+		html += show_record(["S8-T","S40-T","S10-T","S10-T-R","S10-T-R"], head);
+	}
+
+	// CDR type header
+	if (state.type !== cdr.type) {
+		// If last type is voice and current is a data record
+		if (state.type === 'voice' && cdr.type !== 'voice') {
+			// Voice totals
+			handset_totals('voice', cdr.caller);
+
+			// Header for data
+			html += show_record(["S30-H2"], ["\nMessaging, Mobile Internet\n"]);
+
+			// CDR record table header
+			head = ['Time','Number or description','Details','Normal','You pay'];
+			html += show_record(["S8-T","S40-T","S10-T","S10-T-R","S10-T-R"], head);
+		}
+
+		// Save data type and reset data variable to print the CDR
+		state.type = cdr.type;
+	}
+
+	// Show date when it changes
+	datetime = cdr.time.split(' ');
+	if (state.date !== datetime[0]) {
+		state.date = datetime[0];
+		html += show_record(["S10-B"], [moment(datetime[0],'DD/MM/YY').format('ddd DD MMMM')]);
+	}
+
+	// Show voice records
+	if (cdr.type === 'voice') {
+		// Data record
+		data.push(datetime[1]);
+		data.push(cdr.called + ' ' + cdr.details);
+		// Call duration
+		data.push(format_duration(cdr.duration));
+		// Charge
+		data.push(parseFloat(cdr.charge / 100));
+		// Charge if not in bundle
+		data.push((cdr.included === 'true') ? 0 : parseFloat(cdr.charge / 100));
+		// Included in bundle flag
+		data.push((cdr.included === 'true' && cdr.charge > 0) ? 'Y' : '');
+		html += show_record(["S8","S40","S10","F10.3-R-£","F10.3-R-£","S3"], data);
+
+		// Increment running totals
+		dom = parseInt(moment(datetime[0],'DD/MM/YY').format('DD'));
+		vpn = (cdr.details === 'VPN') ? 1 : 0;
+		handset_inc_total(cdr.type, cdr.caller, {'chg':data[3], 'act':data[4], 'who':cdr.called, 'dom':dom, 'vpn':vpn, 'dur':cdr.duration});
+	}
+	// Data records
+	else {
+		// Data record
+		data.push(datetime[1]);
+		// Called number or 'Mobile internet' if data
+		data.push((cdr.type === 'data') ? 'Mobile internet' : cdr.called + ' ' + cdr.details);
+		// Data volume, empty if anything else
+		if (cdr.volume) {
+			data.push(format_volume(cdr.volume));
+		}
+		else {
+			data.push('');
+		}
+		// Charge
+		data.push(parseFloat(cdr.charge / 100));
+		// Charge if not in bundle
+		data.push((cdr.included === 'true') ? 0 : parseFloat(cdr.charge / 100));
+		// Included in bundle flag
+		data.push((cdr.included === 'true') ? 'Y' : '');
+		html += show_record(["S8","S40","S10","F10.3-R-£","F10.3-R-£","S3"], data);
+
+		// Increment running totals
+		handset_inc_total(cdr.type, cdr.caller, {'chg':data[3], 'act':data[4], 'vol':cdr.volume});
+	}
+
+	// Handset data totals
+	if (current === last) {
+		handset_totals('data', cdr.caller);
+	}
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Increment the running totals for the handset
+//
+// Argument 1 : Call data record type
+// Argument 2 : Handset number
+// Argument 3 : Data object
+// ---------------------------------------------------------------------------------------------
+function handset_inc_total (type, caller, data) {
+	// Voice specific totals
+	if (type === 'voice') {
+		handsets[caller].voice.tot += 1;
+		handsets[caller].voice.totdur += data.dur;
+		handsets[caller].voice.chg += data.chg;
+		handsets[caller].voice.exc += data.act;
+		handsets[caller].voice.vpn += data.vpn;
+		handsets[caller].voice.vpndur += (data.vpn) ? data.dur : 0;
+
+		// Data for 2D bubble graphs
+		if (handsets[caller].voice.bubble[data.who] === undefined) {
+			handsets[caller].voice.bubble[data.who] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+		}
+		handsets[caller].voice.bubble[data.who][data.dom-1] += 1;
+//		handsets[caller].voice.bubble[data.dom-1] += 1;
+
+		// Data for 3D surface graphs
+		if (handsets[caller].voice.surface[data.who] === undefined) {
+			handsets[caller].voice.surface[data.who] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+		}
+		handsets[caller].voice.surface[data.who][data.dom-1] += 1;
+	}
+	// Data specific totals (text, long text, video, picture and mobile data)
+	else {
+		handsets[caller].data.tot += 1;
+		handsets[caller].data.dat += (type === 'data') ? 1 : 0;
+		handsets[caller].data.dattot += (type === 'data') ? data.vol : 0;
+		handsets[caller].data.txt += (type === 'text') ? 1 : 0;
+		handsets[caller].data.lng += (type === 'longtext') ? 1 : 0;
+		handsets[caller].data.pic += (type === 'picture') ? 1 : 0;
+		handsets[caller].data.vid += (type === 'video') ? 1 : 0;
+		handsets[caller].data.chg += data.chg;
+		handsets[caller].data.exc += data.act;
+	}
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Report of CDRs for each handset
+//
+// Argument 1 : Handset
+// ---------------------------------------------------------------------------------------------
+function handset_report (handset) {
+	var sorted, i, arr, cdr;
+
+	// Initialise the HTML output
+	html = '<html><head><title>Bill for ';
+	html += handset;
+	html += '</title><link rel="stylesheet" href="' + config.system.css + '"></head><body>';
+
+	// Sort CDRs by date time for this handset
+	sorted = handsets[handset].unsorted.sort();
+
+	// Process CDRs for this handset
+	for (i=0; i<sorted.length; i++) {
+		arr = sorted[i].split('-');
+		cdr = handsets[handset].cdr[parseInt(arr[2])];
+		if (cdr) {
+			handset_cdr(cdr, i, sorted.length-1);
+		}
+	}
+
+	// Close the HTML output and write to file
+	html += '</body></html>';
+	write_file('data', handset + '.html', html);
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Show usage totals for a handset
+//
+// Argument 1 : Voice or data
+// Argument 2 : Handset
+// ---------------------------------------------------------------------------------------------
+function handset_totals (type, handset) {
+	var str, dur, data;
+
+	// Total header
+	html += show_record(["S10-B"], ['Totals']);
+
+	// Voice sub-totals
+	if (type === 'voice') {
+		str = "Total of " + handsets[handset].voice.vpn + " calls inside VPN";
+		dur = format_duration(handsets[handset].voice.vpndur);
+		data = [str, '', dur, 0, 0];
+		html += show_record(["S49","S10","S1","F10.3-R-£","F10.3-R-£"], data);
+
+		str = "Total of " + (handsets[handset].voice.tot - handsets[handset].voice.vpn) + " other calls";
+		dur = format_duration(handsets[handset].voice.totdur - handsets[handset].voice.vpndur);
+		data = [str, '', dur, handsets[handset].voice.chg, handsets[handset].voice.exc];
+		html += show_record(["S49","S10","S1","F10.3-R-£","F10.3-R-£"], data);
+
+		str = "Total of " + handsets[handset].voice.tot + " calls";
+		dur = format_duration(handsets[handset].voice.totdur);
+		data = [str, '', dur, handsets[handset].voice.chg, handsets[handset].voice.exc];
+		html += show_record(["S49","S10","S1","F10.3-R-£","F10.3-R-£"], data);
+	}
+
+	// Data sub-totals and handset total
+	if (type === 'data') {
+		// Breakdown of data types
+		if (handsets[handset].data.dat > 0) {
+			data = [handsets[handset].data.dat + ' mobile internet charges', '', format_volume(handsets[handset].data.dattot), '', ''];
+			html += show_record(["S60","S1","S10","S1","S1"], data);
+		}
+		if (handsets[handset].data.txt > 0) {
+			data = [handsets[handset].data.txt + ' texts', '', '', '', ''];
+			html += show_record(["S60","S1","S1","S1","S1"], data);
+		}
+		if (handsets[handset].data.lng > 0) {
+			data = [handsets[handset].data.lng + ' long texts', '', '', '', ''];
+			html += show_record(["S60","S1","S1","S1","S1"], data);
+		}
+		if (handsets[handset].data.pic > 0) {
+			data = [handsets[handset].data.pic + ' pictures', '', '', '', ''];
+			html += show_record(["S60","S1","S1","S1","S1"], data);
+		}
+		if (handsets[handset].data.vid > 0) {
+			data = [handsets[handset].data.vid + ' videos', '', '', '', ''];
+			html += show_record(["S60","S1","S1","S1","S1"], data);
+		}
+
+		// Data usage total
+		data = ['Data usage total', '', '', handsets[handset].data.chg, handsets[handset].data.exc];
+		html += show_record(["S60s","S1","S1","F10.3-R-£","F10.3-R-£"], data);
+
+		// Handset total and some new lines
+		str = "Total voice and data usage";
+		data = [str, '', '', '', (handsets[handset].voice.exc + handsets[handset].data.exc)];
+		html += show_record(["S60-B","S1-B","S1-B","S1-B","F21.3-R-£-B"], data);
+	}
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Create 2D bubble graph of usage
+//
+// Argument 1 : Handset number
+// ---------------------------------------------------------------------------------------------
+function handset_usage_bubble (handset) {
+	var index, data, called, i, dom = [], x = [], y = [], size = [], text = [], n,
+		gph = config.graphs.usageBubble;
+
+	// Create HTML page
+	index = '<html><head>';
+	index += '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>';
+	index += '</head><body>';
+	// Plotly chart will be drawn inside this DIV
+	index += '<div id="plotlyDiv" style="width:480px; height:400px;"></div>';
+	index += '<script>';
+
+	// Data for graph
+	index += 'var data = [ ';
+	data = handsets[handset].voice.bubble;
+	called = Object.keys(data).sort();
+
+	// Day of month
+	for (i=1; i<=31; i++) {
+		dom.push('"' + moment((i + ' ' + prms.date.full), 'DD MMM YYYY').format('YYYY-MM-DD') + '"');
+	}
+
+	// Build the data arrays
+	for (i=0; i<called.length; i++) {
+		x = [];
+		y = [];
+		size = [];
+		text = [];
+		for (n=0; n<dom.length; n++) {
+			if (data[called[i]][n] > 0) {
+				x.push(dom[n]);
+				y.push(i+1);
+				size.push(10 * data[called[i]][n]);
+				text.push('"' + data[called[i]][n] + ' Call' + ((data[called[i]][n] > 1) ? 's' : '') + ' to ' + called[i] + '"');
+			}
+		}
+		index += '{ name: "",';
+		index += 'x: [' + x.join() + '],';
+		index += 'y: [' + y.join() + '],';
+		index += 'text: [' + text.join() + '],';
+		index += 'mode: "markers",';
+		index += 'marker: {';
+		index += 'size: [' + size.join() + '] } },';
+	}
+
+	// Remove last comma and close array
+	index = index.replace(/,$/, '') + ' ]; ';
+
+	// Graph layout
+	index += 'var layout = {';
+	index += 'title: "Calls made by ' + handset + ' during ' + prms.date.full + '",';
+	index += 'showlegend: false, width: ' + gph.width + ', height: ' + gph.height + ', ';
+	index += 'xaxis: {title: "' + gph.legend.x + '", showline: ' + gph.gridline.x + ', showticklabels: true, ticklen: 8, type: "date"}, ';
+	index += 'yaxis: {title: "' + gph.legend.y + '", showline: ' + gph.gridline.y + ', showticklabels: false, zeroline: false} ';
+	index += '};';
+
+	// Close the graph
+	index += 'Plotly.newPlot("plotlyDiv", data, layout);';
+	index += '</script></body></html>';
+
+	// Write the graph to a file
+	write_file('data', handset + '_ub.html', index);
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Create 3D surface graph of usage
+//
+// Argument 1 : Handset number
+// ---------------------------------------------------------------------------------------------
+function handset_usage_surface (handset) {
+	var index, data, called, i, dom = [], caller = [],
+		gph = config.graphs.usageSurface;
+
+	// Create HTML page
+	index = '<html><head>';
+	index += '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>';
+	index += '</head><body>';
+	// Plotly chart will be drawn inside this DIV
+	index += '<div id="plotlyDiv" style="width:480px; height:400px;"></div>';
+	index += '<script>';
+
+	// Data for graph
+	index += 'var data = [ {';
+	data = handsets[handset].voice.surface;
+	called = Object.keys(data).sort();
+
+	// X-axis : Day of month
+	for (i=1; i<=31; i++) {
+//		dom.push('"' + moment((i + ' ' + prms.date.full), 'DD MMM YYYY').format('DD ddd') + '"');
+		dom.push('"' + moment((i + ' ' + prms.date.full), 'DD MMM YYYY').format('YYYY-MM-DD') + '"');
+	}
+	index += 'x: [' + dom.join() + '],';
+
+	// Y-axis : Caller number
+	for (i=0; i<called.length; i++) {
+		caller.push('"[' + i + '] ' + called[i] + '"');
+//		caller.push('"' + called[n] + '"');
+	}
+	index += 'y: [' + caller.join() + '],';
+
+	// Z-axis
+	index += 'z: [';
+	for (i=0; i<called.length; i++) {
+		index += '[' + data[called[i]].join() + ']';
+		index += (i<called.length-1) ? ',' : '';
+	}
+	index += '],';
+
+	// Graph layout
+	index += 'type: "surface"';
+	index += '} ];';
+	index += 'var layout = {';
+	index += 'title: "Calls made by ' + handset + ' during ' + prms.date.full + '",';
+	index += 'autosize: true, width: ' + gph.width + ', height: ' + gph.height + ', ';
+	index += 'margin: { l: ' + gph.left + ', r: ' + gph.right + ', b: ' + gph.bottom + ', t: ' + gph.top + ' }, ';
+	index += 'scene: { xaxis: {title: "' + gph.legend.x + '", showline: ' + gph.gridline.x + ', showspikes: false, ticklen: 8, type: "date"}, ';
+	index += '		   yaxis: {title: "' + gph.legend.y + '", showline: ' + gph.gridline.y + ', showspikes: false, showticklabels: false}, ';
+	index += '		   zaxis: {title: "' + gph.legend.z + '", showline: ' + gph.gridline.z + ', showspikes: false, ticklen: 8} }';
+	index += '};';
+
+	// Close the graph
+	index += 'Plotly.newPlot("plotlyDiv", data, layout);';
+	index += '</script></body></html>';
+
+	// Write the graph to a file
+	write_file('data', handset + '_us.html', index);
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Build the index page
+// ---------------------------------------------------------------------------------------------
+function index_page () {
+	var index, i, handset;
+
+	// Create HTML page for company linking all months ???????????????????????????????????????????????????? LIST ALL MONTHS NOT JUST 1
+	index = '<html><head>';
+	index += '<title>Vodafone Bills</title>';
+	index += '<link rel="stylesheet" href="' + config.system.css + '">';
+	index += '</head><body>';
+	index += '<h1>' + prms.company.name + ' Vodafone Bill</h1>';
+	index += '<h2><a href="' + prms.date.yymm + '/summary.html">' + prms.date.full + '</a></h2>';
+
+	// Close the HTML link page and write to file
+	index += '</ol></body></html>';
+	write_file('index', 'index.html', index);
+
+	// Handset reports
+	for (i=0; i<handsets.seq.length; i++) {
+		handset = handsets.seq[i];
+
+		// Create usage report for each handset and create handset totals
+		handset_report(handset);
+
+		// Create 3D surface graph of usage
+		handset_usage_surface(handset);
+
+		// Create 2D bubble graph of usage
+		handset_usage_bubble(handset);
+	}
+
+	// Summary of handset usage for the company
+	company_summary();
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Start processing company data
+//
+// Argument 1 : Object holding organisation data
+// ---------------------------------------------------------------------------------------------
+function initialise (data) {
+	var org = {}, i, caller, n, packages, arr;
+
+	// Create a unique ordered list of handsets
+	org = JSON.parse(data.toString());
+	handsets.seq = Object.keys(org.handsets).sort();
+
+	// Initialise data for each handset
+	for (i=0; i<handsets.seq.length; i++) {
+		caller = handsets.seq[i];
+
+		// Add usage containers
+		if (handsets[caller] === undefined) {
+			handsets[caller] = {};
+			handsets[caller].cdr = [];
+			handsets[caller].unsorted = [];
+			handsets[caller].data = {};
+			handsets[caller].data.tot = 0;
+			handsets[caller].data.dat = 0;
+			handsets[caller].data.dattot = 0;
+			handsets[caller].data.txt = 0;
+			handsets[caller].data.lng = 0;
+			handsets[caller].data.pic = 0;
+			handsets[caller].data.vid = 0;
+			handsets[caller].data.chg = 0;
+			handsets[caller].data.exc = 0;
+			handsets[caller].voice = {};
+			handsets[caller].voice.tot = 0;
+			handsets[caller].voice.totdur = 0;
+			handsets[caller].voice.vpn = 0;
+			handsets[caller].voice.vpndur = 0;
+			handsets[caller].voice.chg = 0;
+			handsets[caller].voice.exc = 0;
+			handsets[caller].voice.bubble = {};
+			handsets[caller].voice.surface = {};
+			handsets[caller].standing = {};
+		}
+
+		// Load standing charges
+		packages = org.handsets[caller];
+		for (n=0; n<packages.length; n++) {
+			arr = packages[n].split('-');
+			handsets[caller].standing[arr[0]] = vodafone.packages[arr[0]].rates[arr[1]];
+		}
+	}
+
+	// Load the CDR file
+	load_cdrs();
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Load all the CDRs from file and store in a the 'handsets' object
+// ---------------------------------------------------------------------------------------------
+function load_cdrs () {
+	var cdr;
+
+	// Process the billing data in the CDR file line by line
+	cdr = readline.createInterface({
+		input: fs.createReadStream(prms.cdrfile)
+	});
+
+	// Read billing records from CDR file and process
+	cdr.on('line', function (line) {
+		var json, num, typ;
+
+		// Convert JSON to object and add the record number
+		json = JSON.parse(line);
+
+		// Increment the record number
+		recno++;
+
+		// Add CDR to handset
+		handsets[json.caller].cdr[recno] = json;
+
+		// Add a unique index for sorting - {call type}-{date/time}-00000nn
+		typ = (json.type === 'voice') ? '1' : '2';
+		num = '000000' + recno;
+		handsets[json.caller].unsorted.push(typ + '-' + json.time + '-' + num.slice(-7));
+	});
+
+	// Close the CDR file and process the CDRs for each handset
+	cdr.on('close', function () {
+		index_page();
+	});
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Parse a charge to be included in the report
+//
+// Argument 1 : Charge in pence
+//
+// If charge is defined return the value
+// If value is not defined, return 0
+// ---------------------------------------------------------------------------------------------
+function nvl (value) {
+	return (value === undefined) ? 0 : parseFloat(value);
+}
+
+
+
+// ---------------------------------------------------------------------------------------------
+// Read company configuration data from a file
+//
+// Argument 1 : Name of file
+// ---------------------------------------------------------------------------------------------
+function read_company (file) {
+	fs.readFile(file, function(error, data) {
+		if (error) {
+			console.error("Error reading [" + file + "]: " + error.message);
+		}
+		// Start processing company data
+		initialise(data);
+	});
 }
 
 
@@ -659,10 +873,15 @@ function show_record (format, data) {
 // ---------------------------------------------------------------------------------------------
 // Write data to a file
 //
-// Argument 1 : Name of file
-// Argument 2 : Data to be saved
+// Argument 1 : Type of file (index or company data)
+// Argument 2 : Name of file
+// Argument 3 : Data to be saved
 // ---------------------------------------------------------------------------------------------
-function write_file (file, data) {
+function write_file (type, name, data) {
+	var file = config.system.root + '/' + prms.company.code + '/';
+	file += (type === 'data') ? prms.date.yymm + '/' : '';
+	file += name;
+
 	fs.writeFile(file, data, function(error) {
 		if (error) {
 			console.error("Error writing to [" + file + "]: " + error.message);

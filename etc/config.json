@@ -3,5 +3,41 @@
 		"css" : "/home/bf/Drive/Software/MVNO/etc/mvno.css",
 		"data" : "/home/bf/Temp/mvno/data",
 		"root" : "/home/bf/Temp/mvno/html"
+	},
+	"graphs" : {
+		"usageBubble" : {
+			"width" : 1200,
+			"height" : 800,
+			"left" : 65,
+			"right" : 50,
+			"top" : 90,
+			"bottom" : 65,
+			"legend" : {
+				"x" : "Day of Month",
+				"y" : "Number Called"
+			},
+			"gridline" : {
+				"x" : true,
+				"y" : true
+			}
+		},
+		"usageSurface" : {
+			"width" : 1500,
+			"height" : 1000,
+			"left" : 65,
+			"right" : 50,
+			"top" : 90,
+			"bottom" : 65,
+			"legend" : {
+				"x" : "Day",
+				"y" : "Called",
+				"z" : "# Calls"
+			},
+			"gridline" : {
+				"x" : true,
+				"y" : true,
+				"z" : true
+			}
+		}
 	}
 }
