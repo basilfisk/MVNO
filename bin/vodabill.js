@@ -26,7 +26,8 @@ var	fs = require('fs'),
 	vsprintf = require('/usr/local/lib/node_modules/sprintf-js').vsprintf,
 	config = require('/home/bf/Drive/Software/MVNO/etc/config.json'),
 	vodafone = require('/home/bf/Drive/Software/MVNO/etc/vodafone.json'),
-	state = {}, prms = {}, handsets = {}, recno = 0, html;
+	state = {}, prms = {}, handsets = {}, recno = 0, html,
+	month = ['January','February','March','April','May','June','July','August','Sepember','October','November','December'];
 
 // Initialise the state
 state.date = '';
@@ -51,11 +52,15 @@ for (i=2; i<process.argv.length; i++) {
 			break;
 		case '-month':
 		case '-m':
-			prms.date.month = opt[1];
+			if (opt[1] < 1 || opt[1] > 12) {
+				console.log("Month must be between 1 and 12");
+				return;
+			}
+			prms.date.month = month[opt[1]-1];
 			break;
 		case '-year':
 		case '-y':
-			prms.date.year = opt[1];
+			prms.date.year = '20' + opt[1];
 			break;
 	}
 }
@@ -68,8 +73,8 @@ if (prms.cdrfile === undefined ||
 	console.log("Invalid argument(s) specified. The following arguments must be provided:");
 	console.log("\t-c|cdr    Full path and name of CDR file");
 	console.log("\t-o|org    Name of company");
-	console.log("\t-m|month  Month the CDRs relate to, in 'Mon' format");
-	console.log("\t-y|year   Year the CDRs relate to, in 'YYMM' format");
+	console.log("\t-m|month  Month the CDRs relate to (1-12)";
+	console.log("\t-y|year   Year the CDRs relate to ('YY' format)");
 	return;
 }
 
@@ -98,7 +103,7 @@ function company_summary () {
 	// Create HTML page linking all handset reports
 	index = '<html><head>';
 	index += '<title>' + prms.company.name + ' Summary for ' + prms.date.full + '</title>';
-	index += '<link rel="stylesheet" href="' + config.system.css + '">';
+	index += '<link rel="stylesheet" href="../' + config.www.css + '">';
 	index += '</head><body>';
 	index += '<h1>' + prms.company.name + ' Vodafone Bill for ' + prms.date.full + '</h1>';
 	index += '<h2>Handset Summary</h2><table>';
@@ -194,7 +199,7 @@ function company_summary () {
 
 	// Close the HTML link page and write to file
 	index += '</table></body></html>';
-	write_file('data', 'summary.html', index);
+	write_file(prms.company.code + '/' + prms.date.yymm, 'summary.html', index);
 }
 
 
@@ -389,7 +394,7 @@ function handset_report (handset) {
 	// Initialise the HTML output
 	html = '<html><head><title>Bill for ';
 	html += handset;
-	html += '</title><link rel="stylesheet" href="' + config.system.css + '"></head><body>';
+	html += '</title><link rel="stylesheet" href="../' + config.www.css + '"></head><body>';
 
 	// Sort CDRs by date time for this handset
 	sorted = handsets[handset].unsorted.sort();
@@ -405,7 +410,7 @@ function handset_report (handset) {
 
 	// Close the HTML output and write to file
 	html += '</body></html>';
-	write_file('data', handset + '.html', html);
+	write_file(prms.company.code + '/' + prms.date.yymm, handset + '.html', html);
 }
 
 
@@ -543,7 +548,7 @@ function handset_usage_bubble (handset) {
 	index += '</script></body></html>';
 
 	// Write the graph to a file
-	write_file('data', handset + '_ub.html', index);
+	write_file(prms.company.code + '/' + prms.date.yymm, handset + '_ub.html', index);
 }
 
 
@@ -609,13 +614,13 @@ function handset_usage_surface (handset) {
 	index += '</script></body></html>';
 
 	// Write the graph to a file
-	write_file('data', handset + '_us.html', index);
+	write_file(prms.company.code + '/' + prms.date.yymm, handset + '_us.html', index);
 }
 
 
 
 // ---------------------------------------------------------------------------------------------
-// Build the index page
+// Build the main index page
 // ---------------------------------------------------------------------------------------------
 function index_page () {
 	var index, i, handset;
@@ -623,14 +628,14 @@ function index_page () {
 	// Create HTML page for company linking all months ???????????????????????????????????????????????????? LIST ALL MONTHS NOT JUST 1
 	index = '<html><head>';
 	index += '<title>Vodafone Bills</title>';
-	index += '<link rel="stylesheet" href="' + config.system.css + '">';
+	index += '<link rel="stylesheet" href="' + config.www.css + '">';
 	index += '</head><body>';
 	index += '<h1>' + prms.company.name + ' Vodafone Bill</h1>';
 	index += '<h2><a href="' + prms.date.yymm + '/summary.html">' + prms.date.full + '</a></h2>';
 
 	// Close the HTML link page and write to file
 	index += '</ol></body></html>';
-	write_file('index', 'index.html', index);
+	write_file(prms.company.code, 'index.html', index);
 
 	// Handset reports
 	for (i=0; i<handsets.seq.length; i++) {
@@ -713,11 +718,19 @@ function initialise (data) {
 // Load all the CDRs from file and store in a the 'handsets' object
 // ---------------------------------------------------------------------------------------------
 function load_cdrs () {
-	var cdr;
+	var stream, cdr;
+
+	// Open the file as a readable stream
+    var stream = fs.createReadStream(prms.cdrfile);
+
+    // Catch any errors that happen while creating the readable stream
+    stream.on('error', function (err) {
+    	console.log("Can't read CDR file [" + prms.cdrfile + "]: " + err);
+    });
 
 	// Process the billing data in the CDR file line by line
 	cdr = readline.createInterface({
-		input: fs.createReadStream(prms.cdrfile)
+		input: stream
 	});
 
 	// Read billing records from CDR file and process
@@ -737,6 +750,11 @@ function load_cdrs () {
 		typ = (json.type === 'voice') ? '1' : '2';
 		num = '000000' + recno;
 		handsets[json.caller].unsorted.push(typ + '-' + json.time + '-' + num.slice(-7));
+	});
+
+	// Trap error handling CDR file
+	cdr.on('error', function (error) {
+		console.log("Error reading [" + prms.cdrfile + "]: " + error.message);
 	});
 
 	// Close the CDR file and process the CDRs for each handset
@@ -769,10 +787,12 @@ function nvl (value) {
 function read_company (file) {
 	fs.readFile(file, function(error, data) {
 		if (error) {
-			console.error("Error reading [" + file + "]: " + error.message);
+			console.log("Error reading [" + file + "]: " + error.message);
 		}
 		// Start processing company data
-		initialise(data);
+		else {
+			initialise(data);
+		}
 	});
 }
 
@@ -873,18 +893,20 @@ function show_record (format, data) {
 // ---------------------------------------------------------------------------------------------
 // Write data to a file
 //
-// Argument 1 : Type of file (index or company data)
+// Argument 1 : Directory holding file, relative to index.html
 // Argument 2 : Name of file
 // Argument 3 : Data to be saved
 // ---------------------------------------------------------------------------------------------
-function write_file (type, name, data) {
-	var file = config.system.root + '/' + prms.company.code + '/';
-	file += (type === 'data') ? prms.date.yymm + '/' : '';
-	file += name;
+function write_file (dir, name, data) {
+	var file = config.system.html;
+	if (dir !== undefined) {
+		file += '/' + dir;
+	}
+	file += '/' + name;
 
 	fs.writeFile(file, data, function(error) {
 		if (error) {
-			console.error("Error writing to [" + file + "]: " + error.message);
+			console.log("Error writing to [" + file + "]: " + error.message);
 		}
 	});
 }

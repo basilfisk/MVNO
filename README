@@ -1,39 +1,17 @@
-Create CDRs from Vodafone PDF Bill
-----------------------------------
-
-1.	Extract unprocessed text CDR data from a PDF bill
-		bin/pdf2txt "data/Sitec Vodafone May Bill.pdf" tmp/raw-pdf.txt
-
-2.	Generate CDRs from unprocessed text CDR data
-		node bin/txt2cdr.js -cdr="/home/bf/Temp/mvno/tmp/cdr-pdf.json" -txt="/home/bf/Temp/mvno/tmp/raw-pdf.txt"
-
-3.	Print a replica Vodafone bill
-		node bin/vodabill.js -cdr="/home/bf/Temp/mvno/tmp/cdr-pdf.json" -year=2016 -month=May -org=Sitec
-
-4.	Generate an MVNO bill from a CDR file
-		node bin/billing.js -cdr="/home/bf/Temp/mvno/tmp/cdr-pdf.json" -out=table
-
-
-
-Create CDRs from Vodafone CSV File
-----------------------------------
-
-1.	Generate CDRs from records in CSV file
-		node bin/csv2cdr.js -csv="/home/bf/Temp/mvno/data/Phone Itemisation.csv" -cdr="/home/bf/Temp/mvno/tmp/cdr-csv.json"
-
-2.	Generate an MVNO bill from a CDR file
-		node bin/billing.js -cdr="/home/bf/Temp/mvno/tmp/cdr-csv.json" -out=table
-
-
-
-
-
 OUTSTANDING ISSUES
 ------------------
 txt2cdr.js
 	Missing some records with unwanted stuff in column 1 but CDRs in column 2
-	Calls abroad : 07825284594 07876174025
 	Sort out column widths
+	p53 284594 Total is close, but split is wrong
+	p69 174025 Missing data
+	Calls abroad : 07825284594 07876174025
+		Calls made while in UK
+		Calls made while abroad
+		Calls received while abroad
+		Messages sent in UK
+		Messages sent while abroad
+		Messages received while abroad
 
 vodabill.js
 	Issues
@@ -47,6 +25,8 @@ vodabill.js
 	Analysis
 		Work out % of usage and other charges vs total
 	Graphs
+		2d data X:days, Y:handsets
+		2d messages (text,long,vid,pic) X:days, Y:handsets
 		Call heat map for phone (http://bl.ocks.org/tjdecke/5558084)
 			X day, Y  number, intersection is heat white->red based on most calls/day
 	Database
@@ -54,3 +34,34 @@ vodabill.js
 		Move sitec.json -> customer collection
 		Move rates.json -> mvno collection
 		read_company should use Mongo instead fo FS
+
+
+
+Create CDRs from Vodafone PDF Bill
+----------------------------------
+
+1.	Extract unprocessed text CDR data from a PDF bill
+		bin/pdf2txt "data/Sitec Vodafone May Bill.pdf" tmp/sitec-1605.txt
+
+2.	Generate CDRs from unprocessed text CDR data
+		node bin/txt2cdr.js -cdr="/home/bf/Temp/mvno/cdr/sitec-1605.json" -txt="/home/bf/Temp/mvno/tmp/sitec-1605.txt"
+
+3.	Print a replica Vodafone bill
+		node bin/vodabill.js -cdr="/home/bf/Temp/mvno/cdr/sitec-1605.json" -year=16 -month=5 -org=Sitec
+
+4.	Upload the bills to sitec.breato.com of OFFICE
+		./upload
+
+5.	Generate an MVNO bill from a CDR file
+		node bin/billing.js -cdr="/home/bf/Temp/mvno/tmp/cdr-pdf.json" -out=table
+
+
+
+Create CDRs from Vodafone CSV File
+----------------------------------
+
+1.	Generate CDRs from records in CSV file
+		node bin/csv2cdr.js -csv="/home/bf/Temp/mvno/data/Phone Itemisation.csv" -cdr="/home/bf/Temp/mvno/tmp/cdr-csv.json"
+
+2.	Generate an MVNO bill from a CDR file
+		node bin/billing.js -cdr="/home/bf/Temp/mvno/tmp/cdr-csv.json" -out=table
