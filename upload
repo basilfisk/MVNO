@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# Sitec
+#
+
+# Parameters
+ORG=Sitec
+CODE=sitec
+YEAR=16
+MONTH=5
+
+# Web site details
+SERVER=office
+PORT=15428
+USERNAME=root
+
+# Company site
+SOURCE=~/Temp/mvno/html/${CODE}/*
+TARGET=/srv/websites/mvno/${CODE}
+
+# Generate data for 1 month
+node bin/vodabill.js -cdr="/home/bf/Temp/mvno/cdr/${ORG}-${MONTH}.json" -year=${YEAR} -month=${MONTH} -org=${ORG}
+
+# Upload data to web site
+scp -r -P $PORT $SOURCE ${USERNAME}@${SERVER}:${TARGET}
