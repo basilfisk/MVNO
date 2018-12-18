@@ -1,5 +1,5 @@
 {
-	"rates": {
+	"charges": {
 		"data": 2.2,
 		"landline": 2.9,
 		"mobile": 2.6,
@@ -10,7 +10,7 @@
 		"svc-high": 4.7,
 		"voicemail": 2.9
 	},
-	"types": {
+	"plans": {
 		"data": "data",
 		"sms": "sms",
 		"voice": {

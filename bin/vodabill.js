@@ -25,9 +25,8 @@ var	fs = require('fs'),
 	moment = require('/usr/local/lib/node_modules/moment'),
 	vsprintf = require('/usr/local/lib/node_modules/sprintf-js').vsprintf,
 	config = require('/home/bf/Drive/Software/MVNO/etc/config.json'),
-	vodafone = require('/home/bf/Drive/Software/MVNO/etc/vodafone.json'),
-	state = {}, prms = {}, handsets = {}, recno = 0, html,
-	month = ['January','February','March','April','May','June','July','August','Sepember','October','November','December'];
+	vodafone = require('/home/bf/Drive/Software/MVNO/etc/vodafone.json'),	// DON'T REQUIRE....READ !!!!!!!!!!!!!!!!
+	state = {}, prms = {}, handsets = {}, recno = 0, html;
 
 // Initialise the state
 state.date = '';
@@ -56,7 +55,7 @@ for (i=2; i<process.argv.length; i++) {
 				console.log("Month must be between 1 and 12");
 				return;
 			}
-			prms.date.month = month[opt[1]-1];
+			prms.date.month = config.months[opt[1]-1];
 			break;
 		case '-year':
 		case '-y':
